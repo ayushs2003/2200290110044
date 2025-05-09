@@ -46,11 +46,9 @@ def calculate_average(price_history):
 
 def calculate_correlation(price_history_1, price_history_2):
     if not price_history_1 or not price_history_2:
-        print("One or both price histories are empty")
         return 0
     
     try:
-        # Extract price values, handle cases where 'price' might be missing
         prices_1 = []
         for item in price_history_1:
             if isinstance(item, dict) and 'price' in item:
@@ -61,42 +59,32 @@ def calculate_correlation(price_history_1, price_history_2):
             if isinstance(item, dict) and 'price' in item:
                 prices_2.append(float(item['price']))
         
-        print(f"Extracted prices 1: {prices_1}")
-        print(f"Extracted prices 2: {prices_2}")
         
         if not prices_1 or not prices_2:
-            print("No valid prices extracted")
             return 0
         
         prices_1 = np.array(prices_1)
         prices_2 = np.array(prices_2)
         
         min_length = min(len(prices_1), len(prices_2))
-        print(f"Min length: {min_length}")
         
         if min_length < 2:
-            print("Not enough data points for correlation (need at least 2)")
             return 0
         
         prices_1 = prices_1[:min_length]
         prices_2 = prices_2[:min_length]
         
-        # Check if there's variation in the data
         if np.std(prices_1) == 0 or np.std(prices_2) == 0:
-            print("No variation in one or both price sets")
             return 0
         
         correlation_matrix = np.corrcoef(prices_1, prices_2)
         correlation = correlation_matrix[0, 1]
         
         if np.isnan(correlation):
-            print("Correlation calculation resulted in NaN")
             return 0
         
-        print(f"Successful correlation calculation: {correlation}")
         return correlation
     except Exception as e:
-        print(f"Error in correlation calculation: {str(e)}")
         return 0
 
 @app.route('/stocks/<ticker>', methods=['GET'])
@@ -113,9 +101,7 @@ def get_average_stock_price(ticker):
     if aggregation != 'average':
         return jsonify({'error': 'Only average aggregation is supported'}), 400
     
-    print(f"Getting data for {ticker} with minutes={minutes}")
     data = get_stock_price_history(ticker, minutes)
-    print(f"Data received: {data}")
     
     if isinstance(data, list):
         price_history = data
@@ -126,12 +112,9 @@ def get_average_stock_price(ticker):
             timestamp = stock_data.get('lastUpdatedAt', '')
             price_history = [{'price': price, 'lastUpdatedAt': timestamp}]
         else:
-            print(f"Unexpected response format: {data}")
             return jsonify({'error': 'Invalid data received from stock API'}), 500
     
-    print(f"Price history: {price_history}")
     average_price = calculate_average(price_history)
-    print(f"Average price calculated: {average_price}")
     
     response = {
         'averageStockPrice': average_price,
@@ -144,7 +127,6 @@ def get_average_stock_price(ticker):
 def get_stock_correlation():
     minutes = request.args.get('minutes')
     
-    # Check if minutes is 'm' or not a number, default to 60 minutes
     if minutes == 'm' or not minutes or not minutes.isdigit():
         minutes = 60
     else:
@@ -155,39 +137,27 @@ def get_stock_correlation():
     if len(tickers) != 2:
         return jsonify({'error': 'Exactly 2 tickers are required'}), 400
     
-    # Add some print statements to debug
-    print(f"Getting data for {tickers[0]} with minutes={minutes}")
     data_1 = get_stock_price_history(tickers[0], minutes)
-    print(f"Data for {tickers[0]}: {data_1}")
     
-    print(f"Getting data for {tickers[1]} with minutes={minutes}")
     data_2 = get_stock_price_history(tickers[1], minutes)
-    print(f"Data for {tickers[1]}: {data_2}")
     
     if not isinstance(data_1, list):
         if 'stock' in data_1:
             data_1 = [data_1.get('stock', {})]
         else:
-            print(f"Unexpected response format for {tickers[0]}: {data_1}")
             return jsonify({'error': f'Invalid data received for {tickers[0]}'}), 500
     
     if not isinstance(data_2, list):
         if 'stock' in data_2:
             data_2 = [data_2.get('stock', {})]
         else:
-            print(f"Unexpected response format for {tickers[1]}: {data_2}")
             return jsonify({'error': f'Invalid data received for {tickers[1]}'}), 500
     
-    # Check if data is not empty
     if not data_1 or not data_2:
         return jsonify({'error': 'No price data available for one or both stocks'}), 404
     
-    # Print price data for debugging
-    print(f"Prices for {tickers[0]}: {[item.get('price', 'N/A') for item in data_1]}")
-    print(f"Prices for {tickers[1]}: {[item.get('price', 'N/A') for item in data_2]}")
     
     correlation = calculate_correlation(data_1, data_2)
-    print(f"Calculated correlation: {correlation}")
     
     avg_price_1 = calculate_average(data_1)
     avg_price_2 = calculate_average(data_2)
